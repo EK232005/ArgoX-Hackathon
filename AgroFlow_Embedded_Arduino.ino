@@ -21,8 +21,12 @@ int modevar = 1;
 
 //Dosing and Flushing 
 #define FLUSH_PIN 3     // Example motor driver pin for flush
-#define DOSE1_PIN 4     // Fertilizer 1 PWM pin
-#define DOSE2_PIN 5     // Fertilizer 2 PWM pin
+#define DOSE1_PIN 9     // Fertilizer 1 PWM pin
+#define DOSE2_PIN 11     // Fertilizer 2 PWM pin
+#define IN1 7
+#define IN2 8
+#define IN3 10
+#define IN4 11
 
 void flushSystem() {
   analogWrite(FLUSH_PIN, 180);
@@ -32,13 +36,13 @@ void flushSystem() {
 
 void doseFertilizer1() {
   analogWrite(DOSE1_PIN, 150);
-  delay(2000); // 2 seconds dosing
+  delay(1000); // 2 seconds dosing
   analogWrite(DOSE1_PIN, 0);
 }
 
 void doseFertilizer2() {
   analogWrite(DOSE2_PIN, 150);
-  delay(2000); // 2 seconds dosing
+  delay(1000); // 2 seconds dosing
   analogWrite(DOSE2_PIN, 0);
 }
 
@@ -54,6 +58,15 @@ void setup() {
   gravityTds.begin();            //initialization
   //Turbidity setup
   pinMode(turbsensorpin, INPUT);  //Set the turbidity sensor pin to input mode
+  //dosing pump setup
+  pinMode(IN1,OUTPUT);
+  pinMode(IN2,OUTPUT);
+  pinMode(IN3,OUTPUT);
+  pinMode(IN4,OUTPUT);
+  digitalWrite(IN1,HIGH);
+  digitalWrite(IN2,LOW);
+  digitalWrite(IN3,HIGH);
+  digitalWrite(IN4,LOW);
 }
 void loop() {
   // Command reception from Raspberry Pi
@@ -127,11 +140,14 @@ void loop() {
     default:
       modevar = 1;
       float ecValue = tdsValue / 640.0;
-      Serial.print("TDS: ");Serial.print(tdsValue, 0);Serial.println("ppm");
-      Serial.print("EC: ");Serial.print(ecValue, 2);Serial.println(" mS/cm");
-      Serial.print("pH: ");Serial.println(phValue);
-      Serial.print("Turbidity: ");Serial.println(turbvalout);Serial.println("NTU");
-      Serial.println(" - - - - - - - - - - - - - - - - ");
+
+      // Send sensor data as: SENSOR:tds,ph,turbidity
+      Serial.print("SENSOR:");
+      Serial.print(tdsValue, 0);       // TDS as integer
+      Serial.print(",");
+      Serial.print(phValue, 2);        // pH with 2 decimal places
+      Serial.print(",");
+      Serial.println(turbvalout, 1);   // Turbidity with 1 decimal
       delay(1000);
       break;
   };
