@@ -16,7 +16,6 @@ float phValue;
 #define turbsensorpin A2  // Connect turbidity sensor to Digital Pin 2
 int turbinput;
 float turbval[10], turbtemp, avgturbvoltage, turbvalout;
-
 int modevar = 1;
 
 //Dosing and Flushing 
@@ -34,17 +33,8 @@ void flushSystem() {
   analogWrite(FLUSH_PIN, 0);
 }
 
-void doseFertilizer1() {
-  analogWrite(DOSE1_PIN, 150);
-  delay(1000); // 2 seconds dosing
-  analogWrite(DOSE1_PIN, 0);
-}
-
-void doseFertilizer2() {
-  analogWrite(DOSE2_PIN, 150);
-  delay(1000); // 2 seconds dosing
-  analogWrite(DOSE2_PIN, 0);
-}
+unsigned long lastDoseTime = 0;
+const unsigned long doseInterval = 10000;  // 4 minutes = 240,000 ms
 
 
 void setup() {
@@ -63,25 +53,8 @@ void setup() {
   pinMode(IN2,OUTPUT);
   pinMode(IN3,OUTPUT);
   pinMode(IN4,OUTPUT);
-  digitalWrite(IN1,HIGH);
-  digitalWrite(IN2,LOW);
-  digitalWrite(IN3,HIGH);
-  digitalWrite(IN4,LOW);
 }
 void loop() {
-  // Command reception from Raspberry Pi
-  if (Serial.available()) {
-    String cmd = Serial.readStringUntil('\n');
-    cmd.trim();  // Remove newline/extra whitespace
-
-    if (cmd == "FLUSH") {
-      flushSystem();
-    } else if (cmd == "DOSE1") {
-      doseFertilizer1();
-    } else if (cmd == "DOSE2") {
-      doseFertilizer2();
-    }
-  }
 
   switch (modevar) {
     case 1:
@@ -92,7 +65,6 @@ void loop() {
       break;
 
     case 2:
-
       for (int i = 0; i < 10; i++) {  //Get 10 sample value from the sensor for smooth the value
         buf[i] = analogRead(phsensorpin);
         delay(10);
@@ -114,7 +86,6 @@ void loop() {
       break;
 
     case 3:
-
       for (int i = 0; i < 10; i++) {            //Get 10 sample value from the sensor for smooth the value
         turbinput = analogRead(turbsensorpin);  // read the input on analog input:
         turbval[i] = turbinput;
@@ -140,7 +111,6 @@ void loop() {
     default:
       modevar = 1;
       float ecValue = tdsValue / 640.0;
-
       // Send sensor data as: SENSOR:tds,ph,turbidity
       Serial.print("SENSOR:");
       Serial.print(tdsValue, 0);       // TDS as integer
@@ -151,4 +121,15 @@ void loop() {
       delay(1000);
       break;
   };
+  
+  unsigned long currentTime = millis();
+  if (currentTime - lastDoseTime >= doseInterval) {
+    Serial.println("Dosing pump ON...");
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, LOW);
+    analogWrite(DOSE1_PIN, 180);  // or doseFertilizer2() or both
+    Serial.println("Dosing Fertilizer 1");
+    lastDoseTime = currentTime;
+  }
+
 }
